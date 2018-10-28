@@ -478,7 +478,7 @@ class AppController extends Controller
 
     private function __convertEmailToName($email)
     {
-        $name = explode('@', $email);
+        $name = explode('@', (string)$email);
         $name = explode('.', $name[0]);
         foreach ($name as $key => $value) {
             $name[$key] = ucfirst($value);

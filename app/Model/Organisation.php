@@ -16,7 +16,7 @@ class Organisation extends AppModel
         ),
     );
 
-	private $__orgCache = array();
+    private $__orgCache = array();
 
     public $validate = array(
         'name' => array(
@@ -125,6 +125,8 @@ class Organisation extends AppModel
             $pubSubTool = $this->getPubSubTool();
             $pubSubTool->modified($this->data, 'organisation');
         }
+        $action = $created ? 'add' : 'edit';
+        $this->publishKafkaNotification('organisation', $this->data, $action);
         return true;
     }
 
@@ -377,28 +379,32 @@ class Organisation extends AppModel
         return (empty($org)) ? false : $org[$this->alias];
     }
 
-	public function attachOrgsToEvent($event, $fields)
-	{
-		if (empty($this->__orgCache[$event['Event']['orgc_id']])) {
-			$temp = $this->find('first', array(
-				'conditions' => array('id' => $event['Event']['orgc_id']),
-				'recursive' => -1,
-				'fields' => $fields
-			));
-			if (!empty($temp)) $temp = $temp[$this->alias];
-			$this->__orgCache[$event['Event']['orgc_id']] = $temp;
-		}
-		$event['Orgc'] = $this->__orgCache[$event['Event']['orgc_id']];
-		if (empty($this->__orgCache[$event['Event']['org_id']])) {
-			$temp = $this->find('first', array(
-				'conditions' => array('id' => $event['Event']['org_id']),
-				'recursive' => -1,
-				'fields' => $fields
-			));
-			if (!empty($temp)) $temp = $temp[$this->alias];
-			$this->__orgCache[$event['Event']['org_id']] = $temp;
-		}
-		$event['Org'] = $this->__orgCache[$event['Event']['org_id']];
-		return $event;
-	}
+    public function attachOrgsToEvent($event, $fields)
+    {
+        if (empty($this->__orgCache[$event['Event']['orgc_id']])) {
+            $temp = $this->find('first', array(
+                'conditions' => array('id' => $event['Event']['orgc_id']),
+                'recursive' => -1,
+                'fields' => $fields
+            ));
+            if (!empty($temp)) {
+                $temp = $temp[$this->alias];
+            }
+            $this->__orgCache[$event['Event']['orgc_id']] = $temp;
+        }
+        $event['Orgc'] = $this->__orgCache[$event['Event']['orgc_id']];
+        if (empty($this->__orgCache[$event['Event']['org_id']])) {
+            $temp = $this->find('first', array(
+                'conditions' => array('id' => $event['Event']['org_id']),
+                'recursive' => -1,
+                'fields' => $fields
+            ));
+            if (!empty($temp)) {
+                $temp = $temp[$this->alias];
+            }
+            $this->__orgCache[$event['Event']['org_id']] = $temp;
+        }
+        $event['Org'] = $this->__orgCache[$event['Event']['org_id']];
+        return $event;
+    }
 }

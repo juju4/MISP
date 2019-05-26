@@ -45,6 +45,7 @@ class Log extends AppModel
                             'pull',
                             'push',
                             'remove_dead_workers',
+                            'request',
                             'request_delegation',
                             'reset_auth_key',
                             'serverSettingsEdit',
@@ -115,6 +116,9 @@ class Log extends AppModel
             }
         }
         $this->logData($this->data);
+        if ($this->data['Log']['action'] === 'request' && !empty(Configure::read('MISP.log_paranoid_skip_db'))) {
+            return false;
+        }
         return true;
     }
 
@@ -149,11 +153,11 @@ class Log extends AppModel
                 $condOrg = '';
             }
             $sql = 'SELECT DISTINCT EXTRACT(EPOCH FROM CAST(created AS DATE)) AS "Date",
-									COUNT(id) AS count
-					FROM logs
-					WHERE action NOT IN (' . $condnotinaction . ')
-					' . $condOrg . '
-					GROUP BY "Date" ORDER BY "Date"';
+                                    COUNT(id) AS count
+                    FROM logs
+                    WHERE action NOT IN (' . $condnotinaction . ')
+                    ' . $condOrg . '
+                    GROUP BY "Date" ORDER BY "Date"';
             $validDates = $this->query($sql);
         }
         $data = array();
@@ -256,10 +260,12 @@ class Log extends AppModel
 
     public function logData($data)
     {
-        if (Configure::read('Plugin.ZeroMQ_enable') && Configure::read('Plugin.ZeroMQ_user_notifications_enable')) {
+        if (Configure::read('Plugin.ZeroMQ_enable') && Configure::read('Plugin.ZeroMQ_audit_notifications_enable')) {
             $pubSubTool = $this->getPubSubTool();
             $pubSubTool->publish($data, 'audit', 'log');
         }
+
+        $this->publishKafkaNotification('audit', $data, 'log');
 
         if (Configure::read('Plugin.ElasticSearch_logging_enable')) {
             // send off our logs to distributed /dev/null

@@ -1,8 +1,4 @@
 <div class="events form">
-    <div class="message">
-        <?php echo __('The event created %s, but not synchronised to other MISP instances until it is published.', (Configure::read('MISP.unpublishedprivate') ? __('will be restricted to your organisation') : __('will be visible to the organisations having an account on this platform')));?>
-    </div>
-
 <?php echo $this->Form->create('', array('type' => 'file'));?>
     <fieldset>
         <legend><?php echo __('Add Event');?></legend>
@@ -37,17 +33,19 @@
         ?>
             </div>
         <?php
-        if (isset($this->request->data['Event']['threat_level_id'])) {
-            $selected = $this->request->data['Event']['threat_level_id'];
-        } else {
-            $selected = Configure::read('MISP.default_event_threat_level') ? Configure::read('MISP.default_event_threat_level') : '4';
-        }
+        echo '<div class="input clear"></div>';
+        if (empty(Configure::read('MISP.disable_threat_level'))) {
+            if (isset($this->request->data['Event']['threat_level_id'])) {
+                $selected = $this->request->data['Event']['threat_level_id'];
+            } else {
+                $selected = Configure::read('MISP.default_event_threat_level') ? Configure::read('MISP.default_event_threat_level') : '4';
+            }
 
-        echo $this->Form->input('threat_level_id', array(
-                'div' => 'input clear',
-                'label' => __('Threat Level ') . $this->element('formInfo', array('type' => 'threat_level')),
-                'selected' => $selected,
-                ));
+            echo $this->Form->input('threat_level_id', array(
+                    'label' => __('Threat Level ') . $this->element('formInfo', array('type' => 'threat_level')),
+                    'selected' => $selected,
+                    ));
+        }
         echo $this->Form->input('analysis', array(
                 'label' => __('Analysis ') . $this->element('formInfo', array('type' => 'analysis')),
                 'options' => array($analysisLevels),
@@ -61,6 +59,7 @@
                 ));
         echo $this->Form->input('extends_uuid', array(
                     'label' => __('Extends event'),
+                    'value' => isset($extends_uuid) ? $extends_uuid : '',
                     'div' => 'clear',
                     'class' => 'form-control span6',
                     'placeholder' => __('Event UUID or ID. Leave blank if not applicable.')
@@ -74,7 +73,7 @@ echo $this->Form->end();
 ?>
 </div>
 <?php
-    echo $this->element('side_menu', array('menuList' => 'event-collection', 'menuItem' => 'add'));
+    echo $this->element('/genericElements/SideMenu/side_menu', array('menuList' => 'event-collection', 'menuItem' => 'add'));
 ?>
 
 <script type="text/javascript">
@@ -107,6 +106,7 @@ echo $this->Form->end();
         if ($('#EventDistribution').val() == 4) $('#SGContainer').show();
         else $('#SGContainer').hide();
         initPopoverContent('Event');
+        previewEventBasedOnUuids();
     });
 </script>
 <?php echo $this->Js->writeBuffer();

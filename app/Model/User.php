@@ -271,35 +271,44 @@ class User extends AppModel
 
     public function afterSave($created, $options = array())
     {
-        if (Configure::read('Plugin.ZeroMQ_enable') && Configure::read('Plugin.ZeroMQ_user_notifications_enable')) {
-            $pubSubTool = $this->getPubSubTool();
-			if (!empty($this->data)) {
-	            $user = $this->data;
-	            if (!isset($user['User'])) {
-	                $user['User'] = $user;
-	            }
-	            $action = $created ? 'edit' : 'add';
-	            if (isset($user['User']['action'])) {
-	                $action = $user['User']['action'];
-	            }
-	            if (isset($user['User']['id'])) {
-	                $user = $this->find('first', array(
-	                    'recursive' => -1,
-	                    'conditions' => array('User.id' => $user['User']['id']),
-	                    'fields' => array('id', 'email', 'last_login', 'org_id', 'termsaccepted', 'autoalert', 'newsread', 'disabled'),
-	                    'contain' => array(
-	                        'Organisation' => array(
-	                            'fields' => array('Organisation.id', 'Organisation.name', 'Organisation.description', 'Organisation.uuid', 'Organisation.nationality', 'Organisation.sector', 'Organisation.type', 'Organisation.local')
-	                        )
-	                    )
-	                ));
-	            }
-	            if (isset($user['User']['password'])) {
-	                unset($user['User']['password']);
-	                unset($user['User']['confirm_password']);
-	            }
-	            $pubSubTool->modified($user, 'user', $action);
-			}
+        $pubToZmq = Configure::read('Plugin.ZeroMQ_enable') && Configure::read('Plugin.ZeroMQ_user_notifications_enable');
+        $kafkaTopic = Configure::read('Plugin.Kafka_user_notifications_topic');
+        $pubToKafka = Configure::read('Plugin.Kafka_enable') && Configure::read('Plugin.Kafka_user_notifications_enable') && !empty($kafkaTopic);
+        if ($pubToZmq || $pubToKafka) {
+            if (!empty($this->data)) {
+                $user = $this->data;
+                if (!isset($user['User'])) {
+                    $user['User'] = $user;
+                }
+                $action = $created ? 'edit' : 'add';
+                if (isset($user['User']['action'])) {
+                    $action = $user['User']['action'];
+                }
+                if (isset($user['User']['id'])) {
+                    $user = $this->find('first', array(
+                        'recursive' => -1,
+                        'conditions' => array('User.id' => $user['User']['id']),
+                        'fields' => array('id', 'email', 'last_login', 'org_id', 'termsaccepted', 'autoalert', 'newsread', 'disabled'),
+                        'contain' => array(
+                            'Organisation' => array(
+                                'fields' => array('Organisation.id', 'Organisation.name', 'Organisation.description', 'Organisation.uuid', 'Organisation.nationality', 'Organisation.sector', 'Organisation.type', 'Organisation.local')
+                            )
+                        )
+                    ));
+                }
+                if (isset($user['User']['password'])) {
+                    unset($user['User']['password']);
+                    unset($user['User']['confirm_password']);
+                }
+                if ($pubToZmq) {
+                    $pubSubTool = $this->getPubSubTool();
+                    $pubSubTool->modified($user, 'user', $action);
+                }
+                if ($pubToKafka) {
+                    $kafkaPubTool = $this->getKafkaPubTool();
+                    $kafkaPubTool->publishJson($kafkaTopic, $user, $action);
+                }
+            }
         }
         return true;
     }
@@ -853,7 +862,7 @@ class User extends AppModel
         // Sign the body
         require_once 'Crypt/GPG.php';
         try {
-            $gpg = new Crypt_GPG(array('homedir' => Configure::read('GnuPG.homedir'), 'gpgconf' => Configure::read('GnuPG.gpgconf'), 'binary' => (Configure::read('GnuPG.binary') ? Configure::read('GnuPG.binary') : '/usr/bin/gpg'), 'debug'));	// , 'debug' => true
+            $gpg = new Crypt_GPG(array('homedir' => Configure::read('GnuPG.homedir'), 'gpgconf' => Configure::read('GnuPG.gpgconf'), 'binary' => (Configure::read('GnuPG.binary') ? Configure::read('GnuPG.binary') : '/usr/bin/gpg'), 'debug'));   // , 'debug' => true
             if (Configure::read('GnuPG.sign')) {
                 $gpg->addSignKey(Configure::read('GnuPG.email'), Configure::read('GnuPG.password'));
                 $body = $gpg->sign($body, Crypt_GPG::SIGN_MODE_CLEAR);

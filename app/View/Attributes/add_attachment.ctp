@@ -75,14 +75,14 @@
         ?>
     </fieldset>
 <?php
-echo $this->Form->button('Upload', array('class' => 'btn btn-primary'));
+echo $this->Form->button(__('Upload'), array('class' => 'btn btn-primary'));
 echo $this->Form->end();
 ?>
 </div>
 <?php
     $event['Event']['id'] = $this->request->data['Attribute']['event_id'];
     $event['Event']['published'] = $published;
-    echo $this->element('side_menu', array('menuList' => 'event', 'menuItem' => 'addAttachment', 'event' => $event));
+    echo $this->element('/genericElements/SideMenu/side_menu', array('menuList' => 'event', 'menuItem' => 'addAttachment', 'event' => $event));
 ?>
 <script type="text/javascript">
 <?php

@@ -67,6 +67,9 @@ rm -f $MISPPath/app/tmp/cache/models/myapp_*
 rm -f $MISPPath/app/tmp/cache/persistent/myapp_*
 
 echo "Wiping MySQL tables"
+echo "Removes all users and organizations, except default (id=1)"
+echo " - Change DELETE FROM to > 0 in misp-wipe.sql to also remove default ones"
+echo " - Defaults are created on first login"
 MySQLRUser=${MySQLRUser:-$MySQLUUser}
 MySQLRPass=${MySQLRPass:-$MySQLUPass}
 mysql -u $MySQLRUser -p$MySQLRPass $MISPDB < $SQL
@@ -81,7 +84,7 @@ rm -f $TMP
 echo "Wiping files"
 git clean -f -x app/webroot/img/orgs
 #git clean -f -x app/webroot/img/custom
-git clean -f -x app/tmp/logs/
+git clean -f -d -x app/tmp
 git clean -f -d -x app/files
 
 echo "Updating taxonomies"
@@ -91,6 +94,9 @@ curl --header "Authorization: $AuthKey" --header "Accept: application/json" --he
 
 echo "Updating warninglists"
 curl --header "Authorization: $AuthKey" --header "Accept: application/json" --header "Content-Type: application/json" -o /dev/null -s -X POST ${baseurl}/warninglists/update
+
+echo "Updating noticelists"
+curl --header "Authorization: $AuthKey" --header "Accept: application/json" --header "Content-Type: application/json" -o /dev/null -s -X POST ${baseurl}/noticelists/update
 
 echo "Updating galaxies"
 curl --header "Authorization: $AuthKey" --header "Accept: application/json" --header "Content-Type: application/json" -o /dev/null -s -X POST ${baseurl}/galaxies/update

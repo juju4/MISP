@@ -5,6 +5,10 @@
 	var typeaheadDataMatrixSearch;
 	var pickedGalaxies = [];
 
+	var chosen_options = {
+		width: '100%',
+	};
+
 	$(document).ready(function() {
 
 		$('#attack-matrix-tabscontroller span').off('click.tab').on('click.tab', function (e) {
@@ -16,7 +20,7 @@
 			var colNum = $(jfilter+' .matrix-table > thead > tr > th :visible').length;
 			$('#popover_form_large').css('min-width', 100*colNum);
 			adapt_position_from_viewport(100*colNum);
-		})
+		});
 
 		// form
 		$('.ajax_popover_form .cell-picking').off('click.picking').on('click.picking', function() {
@@ -42,8 +46,8 @@
 			// trigger contextual menu
 			var target = event.target.getBoundingClientRect();
 			var parentDom = document.getElementById('matrix_container').getBoundingClientRect();
-			var x = target.width/2 - 30; 
-			var y = target.height/2 - 14; 
+			var x = target.width/2 - 30;
+			var y = target.height/2 - 14;
 			matrixContextualMenu(event.target, x, y, tagName, tagId, [
 				'Tag event',
 				'Filter event',
@@ -69,14 +73,25 @@
 		});
 		scoredCells.hover(function() { enteringScoredCell($(this), '.statistics_attack_matrix'); }, function() { leavingScoredCell('.statistics_attack_matrix'); });
 		$('.statistics_attack_matrix #checkbox_attackMatrix_showAll').off('click.showAll').on('click.showAll', function() { toggleAttackMatrixCells('.statistics_attack_matrix'); });
-	
+
 		// resize
 		$('span[data-toggle="tab"]').off('shown.resize').on('shown.resize', function (e) {
 			var tabId = $(e.target).attr('href');
 			resizeHeader(tabId);
 		});
+
+		$('#attack-matrix-chosen-select').chosen(chosen_options).on('change', function(event, selected) {
+			if (selected !== undefined) {
+				var clusterId = selected.selected;
+				clusterId = clusterId === undefined ? selected.deselected : clusterId;
+				if (clusterId !== undefined) {
+					var $option = $('td[data-cluster-id="' + clusterId + '"]');
+					pickCell($option, clusterId, false);
+				}
+			}
+		});
 	});
-	
+
 	function resizeHeader(tabId) {
 		if (tabId === undefined) {
 			tabId = '';
@@ -112,10 +127,10 @@
 			visibilityVal = 'hidden';
 			displayVal = 'none';
 		}
-	
+
 		$(jfilter+' .heatCell').filter(function() {
 			return $(this).attr('data-score') == 0;
-		}).css({ 
+		}).css({
 			visibility: visibilityVal,
 		});
 		var rowNum = $(jfilter+' .matrix-table > tbody > tr').length;
@@ -130,7 +145,7 @@
 				$(jfilter+' .matrix-table > tbody > tr:nth-child('+i+')').css({ display: displayVal });
 			}
 		}
-	
+
 		// hide empty column
 		for (var i=1; i<=colNum; i++) {
 			var cellNoValues = $(jfilter+' .matrix-table tr td:nth-child('+i+')').filter(function() {
@@ -142,16 +157,16 @@
 			}
 		}
 	}
-	
+
 	function enteringScoredCell(elem, jfilter) {
 		var score = elem.attr('data-score');
 		adjust_caret_on_scale(score, jfilter);
 	}
-	
+
 	function leavingScoredCell(jfilter) {
 		adjust_caret_on_scale(0, jfilter);
 	}
-	
+
 	function adjust_caret_on_scale(score, jfilter) {
 		var totWidth = $(jfilter + ' #matrix-heatmap-legend').width();
 		var maxScore = parseInt($(jfilter + ' #matrix-heatmap-maxval').text());
@@ -166,15 +181,19 @@
 		minOverwrite = minOverwrite !== undefined ? minOverwrite : minWidth;
 		minOverwrite = minWidth > minOverwrite ? minWidth : minOverwrite;
 		if($(window).width()*0.5+700 <= minOverwrite) {
-			$('#popover_form_large').css('position', 'absolute');
-			$('#popover_form_large').css('left', '10px');
 			var topOff = $('#popover_form_large').offset().top;
 			savedTopOffset =  topOff >= $(document).scrollTop() ? topOff - $(document).scrollTop() : topOff;
-			$('#popover_form_large').css('top', savedTopOffset+$(document).scrollTop()+'px');
+			$('#popover_form_large').css({
+				position: 'absolute',
+				left: '10px',
+				top: savedTopOffset+$(document).scrollTop()+'px'
+			});
 		} else {
-			$('#popover_form_large').css('position', 'fixed');
-			$('#popover_form_large').css('left', '');
-			$('#popover_form_large').css('top', savedTopOffset);
+			$('#popover_form_large').css({
+				position: 'absolute',
+				left: '',
+				top: savedTopOffset
+			});
 		}
 	}
 
@@ -188,7 +207,7 @@
 		div = document.createElement('div');
 		div.id = 'matrixContextualMenu';
 		cell.appendChild(div);
-		
+
 		div = $(div);
 		div.empty();
 		div.css('position', 'absolute');
@@ -201,7 +220,7 @@
 			switch(func_name[i]) {
 				case 'Tag event':
 					span.addClass('fa fa-tag');
-					span.click(function(evt) { 
+					span.click(function(evt) {
 						if(confirm('Are you sure you want to attach ' + tagName + ' to this event?')) {
 							makeTagging([tagId]);
 						}
@@ -210,7 +229,7 @@
 					break;
 				case 'Filter event':
 					span.addClass('fa fa-filter');
-					span.click(function(evt) { 
+					span.click(function(evt) {
 						filterEvent(tagName, tagId);
 						div.remove();
 					});
@@ -221,14 +240,14 @@
 					} else {
 						span.addClass('fa fa-check');
 					}
-					span.click(function(evt) { 
+					span.click(function(evt) {
 						pickCell($(cell), tagId);
 						div.remove();
 					});
 					break;
 				default:
 					span.addClass('fa fa-filter');
-					span.click(function(evt) { 
+					span.click(function(evt) {
 						filterEvent(tagName, tagId);
 						div.remove();
 					});
@@ -249,8 +268,8 @@
 	}
 
 	function makeTagging(tagIds) {
-		$('#GalaxyTargetIds').val(JSON.stringify(tagIds));
-		$('#GalaxyViewMitreAttackMatrixForm').submit();
+		$('#GalaxyViewGalaxyMatrixForm #GalaxyTargetIds').val(JSON.stringify(tagIds));
+		$('#GalaxyViewGalaxyMatrixForm').submit();
 	}
 
 	function filterEvent(tagName, tagId) {
@@ -258,22 +277,31 @@
 		filterAttributes('value', $('#attributesFilterField').data('eventid'));
 	}
 
-	function pickCell(cell, tagId) {
+	function pickCell(cell, clusterId, recurseChosen) {
+		recurseChosen = recurseChosen === undefined ? true : recurseChosen;
+		clusterId = parseInt(clusterId);
+
+		var $cells = $('td[data-cluster-id="' + clusterId + '"]');
 		if (!cell.hasClass('cell-picked')) {
-			pickedGalaxies.push(tagId);
-			cell.addClass('cell-picked');
+			pickedGalaxies.push(clusterId);
+			$cells.addClass('cell-picked');
 		} else { // remove class and data from array
-			var i = pickedGalaxies.indexOf(tagId);
+			var i = pickedGalaxies.indexOf(clusterId);
 			if (i > -1) {
 				pickedGalaxies.splice(i, 1);
 			}
-			cell.removeClass('cell-picked');
+			$cells.removeClass('cell-picked');
+		}
+
+		var $select = $('#attack-matrix-chosen-select');
+		if (recurseChosen) {
+			$select.val(pickedGalaxies).trigger('chosen:updated');
 		}
 
 		if (pickedGalaxies.length > 0) {
-			$('.matrix-div-submit').show();
+			$('.submit-container').show();
 		} else {
-			$('.matrix-div-submit').hide();
+			$('.submit-container').hide();
 		}
 	}
 }());
